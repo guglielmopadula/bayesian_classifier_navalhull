@@ -60,8 +60,9 @@ target=np.concatenate((np.ones(300,dtype=np.int32),np.zeros(300,dtype=np.int32))
 
 def model(X,Y):
     N,D_X=X.shape
-    w1 = numpyro.sample("w1", dist.Normal(jnp.zeros((D_X, 1)), jnp.ones((D_X, 1))))
-    logit=jnp.matmul(X,w1)
+    alpha = numpyro.sample("alpha", dist.Normal(jnp.zeros((1, 1)), jnp.ones((1, 1))))
+    beta = numpyro.sample("beta", dist.Normal(jnp.zeros((D_X, 1)), jnp.ones((D_X, 1))))
+    logit=jnp.matmul(X,beta)+alpha
     y=numpyro.sample("Y",dist.BernoulliLogits(logit).to_event(1),obs=Y)
 rng_key, rng_key_predict = random.split(random.PRNGKey(0))
 samples=run_inference(model,rng_key,train,target)
