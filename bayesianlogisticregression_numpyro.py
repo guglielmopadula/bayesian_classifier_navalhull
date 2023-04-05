@@ -65,6 +65,7 @@ def model(X,Y):
     beta = numpyro.sample("beta", dist.Normal(jnp.zeros((D_X, 1)), jnp.ones((D_X, 1))))
     logit=jnp.matmul(X,beta)+alpha
     y=numpyro.sample("Y",dist.BernoulliLogits(logit).to_event(1),obs=Y)
+    return y
 rng_key, rng_key_predict = random.split(random.PRNGKey(0))
 
 '''

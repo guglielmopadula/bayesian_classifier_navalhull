@@ -103,8 +103,8 @@ test_ds = test_dataset.batch(BATCH_SIZE)
 
 classifier=Classifier()
 init_rng = jax.random.PRNGKey(0)
-learning_rate = 0.01
-momentum = 0.9
+learning_rate = 0.0001
+momentum = 0.5
 state = create_train_state(classifier, init_rng, learning_rate, momentum)
 del init_rng  # Must not be used anymore.
 
