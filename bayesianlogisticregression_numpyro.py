@@ -6,7 +6,7 @@ import numpyro
 from numpyro import handlers
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
-
+import dill
 
 import argparse
 import os
@@ -15,8 +15,9 @@ import time
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-
-NUM_BAYES_SAMPLES=10
+from jax.lib import xla_bridge
+print(xla_bridge.get_backend().platform)
+NUM_BAYES_SAMPLES=1000
 NUM_CHAINS=4
 
 
@@ -65,8 +66,21 @@ def model(X,Y):
     logit=jnp.matmul(X,beta)+alpha
     y=numpyro.sample("Y",dist.BernoulliLogits(logit).to_event(1),obs=Y)
 rng_key, rng_key_predict = random.split(random.PRNGKey(0))
+
+'''
 samples=run_inference(model,rng_key,train,target)
 
+output_dict = {}
+output_dict['model']=model
+output_dict['samples']=samples
+with open('file.pkl', 'wb') as handle:
+    dill.dump(output_dict, handle)
+'''
+
+with open('file.pkl', 'rb') as in_strm:
+    output_dict = dill.load(in_strm)
+model=output_dict['model']
+samples=output_dict['samples']
 
 # predict Y_test at inputs X_test
 vmap_args = (
@@ -78,15 +92,25 @@ predictions = vmap(
 )(*vmap_args)
 predictions = predictions[..., 0]
 
+fitted = vmap(
+    lambda samples, rng_key: predict(model, rng_key, samples, train)
+)(*vmap_args)
+fitted = fitted[..., 0]
+
+
+print(predictions.shape)
+print(fitted.shape)
+
+
 # compute mean prediction and confidence interval around median
 mean_prediction = jnp.mean(predictions, axis=0)
-percentiles = np.percentile(predictions, [5.0, 95.0], axis=0)
+percentiles_pred = np.percentile(predictions, [5.0, 95.0], axis=0)
 
 # make plots
 fig, ax = plt.subplots(figsize=(8, 6), constrained_layout=True)
 
 ax.fill_between(
-    test[:, 1], percentiles[0, :], percentiles[1, :], color="lightblue"
+    test[:, 1], percentiles_pred[0, :], percentiles_pred[1, :], color="lightblue"
 )
 # plot mean prediction
 ax.plot(np.arange(len(mean_prediction)), mean_prediction, "blue", ls="solid", lw=2.0)
@@ -94,6 +118,24 @@ ax.plot(np.arange(len(mean_prediction)), target, "red", ls="solid", lw=2.0)
 
 ax.set(xlabel="X", ylabel="Y", title="Mean predictions with 90% CI")
 
-plt.savefig("bnn_plot.pdf")
+plt.savefig("bnn_plot_pred.pdf")
 
+
+# compute mean prediction and confidence interval around median
+mean_fit = jnp.mean(fitted, axis=0)
+percentiles_fit = np.percentile(fitted, [5.0, 95.0], axis=0)
+
+# make plots
+fig, ax = plt.subplots(figsize=(8, 6), constrained_layout=True)
+
+ax.fill_between(
+    test[:, 1], percentiles_fit[0, :], percentiles_fit[1, :], color="lightblue"
+)
+# plot mean prediction
+ax.plot(np.arange(len(mean_fit)), mean_fit, "blue", ls="solid", lw=2.0)
+ax.plot(np.arange(len(mean_fit)), target, "red", ls="solid", lw=2.0)
+
+ax.set(xlabel="X", ylabel="Y", title="Mean predictions with 90% CI")
+
+plt.savefig("bnn_plot_fit.pdf")
 
