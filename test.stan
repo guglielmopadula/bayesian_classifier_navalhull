@@ -1,3 +1,4 @@
+// saved as test.stan
 data {                                                                                               
   int N; //the number of training observations                                                       
   int N2; //the number of test observations                                                          
