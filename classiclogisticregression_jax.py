@@ -29,7 +29,7 @@ def logistic(r):
 def predict(c, w, X):
     return logistic(jnp.dot(X, w) + c)
 
-def cost(c, w, X, y, eps=1e-14, lmbd=0.01): #0.05
+def cost(c, w, X, y, eps=1e-14, lmbd=0): #0.05
     n = y.size
     p = predict(c, w, X)
     p = jnp.clip(p, eps, 1 - eps)  # bound the probabilities within (0,1) to avoid ln(0)

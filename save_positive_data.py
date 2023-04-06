@@ -86,5 +86,10 @@ for i in trange(600):
     tmp=meshio.read("./positive_data/hull_"+str(i)+".stl")
     alls[i]=tmp.points[points_list].reshape(-1)
 
-
+print(alls.shape)
+vars=np.var(alls,axis=0)
+features_index=np.arange(len(vars))[np.abs(vars)>0]
+np.save("features_index.npy",features_index)
+alls=alls[:,features_index]
+print(alls.shape)
 np.save("positive_data.npy",alls)

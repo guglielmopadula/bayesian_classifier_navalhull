@@ -21,7 +21,11 @@ NUM_BAYES_SAMPLES=1000
 NUM_CHAINS=4
 
 
-
+def invert_permutation(p):
+    p = np.asanyarray(p) # in case p is a tuple, etc.
+    s = np.empty_like(p)
+    s[p] = np.arange(p.size)
+    return s
 
 def run_inference(model, rng_key, X, Y):
     start = time.time()
@@ -33,9 +37,9 @@ def run_inference(model, rng_key, X, Y):
         num_chains=NUM_CHAINS
     )
     mcmc.run(rng_key, X, Y)
-    mcmc.print_summary()
+    #mcmc.print_summary()
     print("\nMCMC elapsed time:", time.time() - start)
-    return mcmc.get_samples()
+    return mcmc.get_samples(group_by_chain=True)
 
 
 # helper function for prediction
@@ -51,37 +55,49 @@ def predict(model, rng_key, samples, X):
 
 true=np.load("positive_data.npy")
 false=np.load("negative_data.npy")
-train_true = true[:300]
-test_true=true[300:]
+train_true = true[:300]     
 train_false = false[:300]
+test_true=true[300:]
 test_false=false[300:]
+train_perm=np.random.permutation(600)
+test_perm=np.random.permutation(600)
 train=np.concatenate((train_true,train_false))
 test=np.concatenate((test_true,test_false))
 target=np.concatenate((np.ones(300,dtype=np.int32),np.zeros(300,dtype=np.int32)))
+target_train=target
+train=train[train_perm]
+target_train=target[train_perm]
+test=test[test_perm]
+target_test=target[test_perm]
 
 def model(X,Y):
     N,D_X=X.shape
-    alpha = numpyro.sample("alpha", dist.Normal(jnp.zeros((1, 1)), jnp.ones((1, 1))))
-    beta = numpyro.sample("beta", dist.Normal(jnp.zeros((D_X, 1)), jnp.ones((D_X, 1))))
+    alpha = numpyro.sample("alpha", dist.Normal(jnp.zeros((1, 1)), 10000*jnp.ones((1, 1))))
+    beta = numpyro.sample("beta", dist.Normal(jnp.zeros((D_X, 1)), 10000*jnp.ones((D_X, 1))))
     logit=jnp.matmul(X,beta)+alpha
     y=numpyro.sample("Y",dist.BernoulliLogits(logit).to_event(1),obs=Y)
     return y
 rng_key, rng_key_predict = random.split(random.PRNGKey(0))
 
+shape=train[0].shape[0]
 '''
-samples=run_inference(model,rng_key,train,target)
+samples=run_inference(model,rng_key,train,target_train)
+samples["alpha"]=samples["alpha"].reshape(NUM_CHAINS*NUM_BAYES_SAMPLES,-1,1)
+samples["beta"]=samples["beta"].reshape(NUM_CHAINS*NUM_BAYES_SAMPLES,-1,1)
 
+print(samples["alpha"].shape)
+print(samples["beta"].shape)
 output_dict = {}
 output_dict['model']=model
 output_dict['samples']=samples
 with open('file.pkl', 'wb') as handle:
     dill.dump(output_dict, handle)
 '''
-
 with open('file.pkl', 'rb') as in_strm:
     output_dict = dill.load(in_strm)
 model=output_dict['model']
 samples=output_dict['samples']
+print(numpyro.diagnostics.summary(samples["beta"].reshape(NUM_CHAINS,NUM_BAYES_SAMPLES,-1)))
 
 # predict Y_test at inputs X_test
 vmap_args = (
@@ -98,14 +114,15 @@ fitted = vmap(
 )(*vmap_args)
 fitted = fitted[..., 0]
 
-
-print(predictions.shape)
-print(fitted.shape)
-
+predictions=predictions[:,invert_permutation(test_perm)]
+target_test=target_test[invert_permutation(test_perm)]
+fitted=fitted[:,invert_permutation(train_perm)]
+target_train=target_train[invert_permutation(train_perm)]
 
 # compute mean prediction and confidence interval around median
 mean_prediction = jnp.mean(predictions, axis=0)
 percentiles_pred = np.percentile(predictions, [5.0, 95.0], axis=0)
+
 
 # make plots
 fig, ax = plt.subplots(figsize=(8, 6), constrained_layout=True)
@@ -115,7 +132,7 @@ ax.fill_between(
 )
 # plot mean prediction
 ax.plot(np.arange(len(mean_prediction)), mean_prediction, "blue", ls="solid", lw=2.0)
-ax.plot(np.arange(len(mean_prediction)), target, "red", ls="solid", lw=2.0)
+ax.plot(np.arange(len(mean_prediction)), target_test, "red", ls="solid", lw=2.0)
 
 ax.set(xlabel="X", ylabel="Y", title="Mean predictions with 90% CI")
 
@@ -134,7 +151,7 @@ ax.fill_between(
 )
 # plot mean prediction
 ax.plot(np.arange(len(mean_fit)), mean_fit, "blue", ls="solid", lw=2.0)
-ax.plot(np.arange(len(mean_fit)), target, "red", ls="solid", lw=2.0)
+ax.plot(np.arange(len(mean_fit)), target_train, "red", ls="solid", lw=2.0)
 
 ax.set(xlabel="X", ylabel="Y", title="Mean predictions with 90% CI")
 

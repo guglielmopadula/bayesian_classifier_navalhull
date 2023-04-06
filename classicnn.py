@@ -44,7 +44,7 @@ class TrainState(train_state.TrainState):
 def create_train_state(module, rng, learning_rate, momentum):
   """Creates an initial `TrainState`."""
   params = module.init(rng, jnp.ones([1, train[0].shape[0]]))['params'] # initialize parameters by passing a template image
-  tx = optax.sgd(learning_rate, momentum)
+  tx = optax.adamw(learning_rate)
   return TrainState.create(
       apply_fn=module.apply, params=params, tx=tx,
       metrics=Metrics.empty())
@@ -79,7 +79,7 @@ def compute_metrics(*, state, batch):
 
 
 BATCH_SIZE=20
-NUM_EPOCHS=100
+NUM_EPOCHS=1000
 NUM_SAMPLES=600
 true=np.load("positive_data.npy")
 false=np.load("negative_data.npy")

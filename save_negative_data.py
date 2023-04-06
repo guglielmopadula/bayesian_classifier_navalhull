@@ -86,5 +86,9 @@ for i in trange(600):
     tmp=meshio.read("./negative_data/hull_"+str(i)+".stl")
     alls[i]=tmp.points[points_list].reshape(-1)
 
-
+print(alls.shape)
+vars=np.var(alls,axis=0)
+features_index=np.load("features_index.npy")
+alls=alls[:,features_index]
+print(alls.shape)
 np.save("negative_data.npy",alls)

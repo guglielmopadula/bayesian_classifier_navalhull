@@ -17,6 +17,6 @@ train=train[train_perm]
 target_train=target[train_perm]
 test=test[test_perm]
 target_test=target[test_perm]
-clf = LogisticRegression(random_state=0,penalty="l2").fit(train, target_train)
+clf = LogisticRegression(random_state=0,penalty=None,max_iter=300).fit(train, target_train)
 print(confusion_matrix(target_train,clf.predict(train)))
 print(confusion_matrix(target_test,clf.predict(test)))
