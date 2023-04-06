@@ -8,7 +8,7 @@ import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
 import dill
 import jax
-
+from sklearn.metrics import confusion_matrix
 import argparse
 import os
 import time
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from jax.lib import xla_bridge
 print(xla_bridge.get_backend().platform)
-NUM_BAYES_SAMPLES=1000
+NUM_BAYES_SAMPLES=6000
 NUM_CHAINS=4
 print(jax.device_count())
 
@@ -165,3 +165,7 @@ ax.set(xlabel="X", ylabel="Y", title="Mean predictions with 90% CI")
 
 plt.savefig("bnn_plot_fit.pdf")
 
+mean_fit=np.ones_like(mean_fit)*(mean_fit>0.5)+np.zeros_like(mean_fit)*(mean_fit<=0.5)
+mean_prediction=np.ones_like(mean_prediction)*(mean_prediction>0.5)+np.zeros_like(mean_prediction)*(mean_prediction<=0.5)
+print(confusion_matrix(target_train,mean_fit))
+print(confusion_matrix(target_test,mean_prediction))
