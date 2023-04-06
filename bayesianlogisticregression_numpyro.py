@@ -7,6 +7,7 @@ from numpyro import handlers
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
 import dill
+import jax
 
 import argparse
 import os
@@ -19,7 +20,7 @@ from jax.lib import xla_bridge
 print(xla_bridge.get_backend().platform)
 NUM_BAYES_SAMPLES=1000
 NUM_CHAINS=4
-
+print(jax.device_count())
 
 def invert_permutation(p):
     p = np.asanyarray(p) # in case p is a tuple, etc.
@@ -70,17 +71,23 @@ target_train=target[train_perm]
 test=test[test_perm]
 target_test=target[test_perm]
 
+classic_coeffs=np.load("classiclogisticregression_coef.npy")
+alpha_mean=classic_coeffs[-1]
+beta_mean=classic_coeffs[:-1]
+alpha_mean=jnp.array(alpha_mean.reshape(1,1))
+beta_mean=jnp.array(beta_mean.reshape(-1,1))
+
 def model(X,Y):
     N,D_X=X.shape
-    alpha = numpyro.sample("alpha", dist.Normal(jnp.zeros((1, 1)), 10000*jnp.ones((1, 1))))
-    beta = numpyro.sample("beta", dist.Normal(jnp.zeros((D_X, 1)), 10000*jnp.ones((D_X, 1))))
+    alpha = numpyro.sample("alpha", dist.Normal(alpha_mean, 5*jnp.ones((1, 1))))
+    beta = numpyro.sample("beta", dist.Normal(beta_mean, 5*jnp.ones((D_X, 1))))
     logit=jnp.matmul(X,beta)+alpha
     y=numpyro.sample("Y",dist.BernoulliLogits(logit).to_event(1),obs=Y)
     return y
 rng_key, rng_key_predict = random.split(random.PRNGKey(0))
 
 shape=train[0].shape[0]
-'''
+
 samples=run_inference(model,rng_key,train,target_train)
 samples["alpha"]=samples["alpha"].reshape(NUM_CHAINS*NUM_BAYES_SAMPLES,-1,1)
 samples["beta"]=samples["beta"].reshape(NUM_CHAINS*NUM_BAYES_SAMPLES,-1,1)
@@ -97,6 +104,7 @@ with open('file.pkl', 'rb') as in_strm:
     output_dict = dill.load(in_strm)
 model=output_dict['model']
 samples=output_dict['samples']
+'''
 print(numpyro.diagnostics.summary(samples["beta"].reshape(NUM_CHAINS,NUM_BAYES_SAMPLES,-1)))
 
 # predict Y_test at inputs X_test

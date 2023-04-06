@@ -4,15 +4,10 @@
 @author: cyberguli
 """
 
-import scipy
 import numpy as np
 np.random.seed(0)
 import meshio
 from tqdm import trange
-from sklearn.decomposition import PCA
-from skdim.id import TwoNN
-from scipy.stats import truncnorm
-from scipy.stats import multivariate_normal
 
 def linear_distribution(N):
     return -2/(N*N+N)*np.arange(1,N+1)+2/N
@@ -105,13 +100,11 @@ for i in trange(NUM_SAMPLES):
     tot_arr=meshio.read("positive_data/hull_{}.stl".format(i)).points
     points=tot_arr[points_list].reshape(-1)
     points2=points[features_index]
-    a=np.random.choice(len(points2),1,p=linear_distribution(len(points2)))
+    #points2=points2+0.005*np.random.rand(len(points2))
+    a=np.random.choice(len(points2),1)[0]#,p=linear_distribution(len(points2)))
+    a=np.max((a,1))
     v=np.random.choice(len(points2), a, replace=False)
-    #matrix=np.random.rand(3*a[0],3*a[0])
-    #matrix=0.5*(matrix+matrix.T)+3*a[0]*np.eye(3*a[0])
-    #matrix=matrix/np.diag(matrix)
-    #points[v]+=0.5*1/np.sqrt(a[0])*multivariate_normal(mean=None, cov=matrix, allow_singular=False).rvs().reshape(-1,3)
-    points2[v]+=0.5*1/np.sqrt(a[0])*np.random.rand(a[0])
+    points2[v]+=0.5*1/np.sqrt(a)*np.random.rand(a)
     points[features_index]=points2
     points=points.reshape(-1,3)
     tot_arr[points_list]=points

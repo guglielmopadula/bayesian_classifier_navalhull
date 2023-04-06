@@ -8,6 +8,7 @@ import optax                           # Common loss functions and optimizers
 from flax import linen as nn  # Linen API
 import jax
 import jax.numpy as jnp
+from sklearn.metrics import confusion_matrix
 
 
 
@@ -161,5 +162,14 @@ def pred_step(state, batch):
   return logits.argmax(axis=1)
 
 test_batch = test_ds.as_numpy_iterator().next()
-pred = pred_step(state, test_batch)
-print(np.sum(np.abs(pred-target))/(np.sum(target)))
+train_batch=train_ds.as_numpy_iterator().next()
+
+fit_train = pred_step(state, train_batch)
+target_train=train_batch[1]
+
+
+pred_test = pred_step(state, test_batch)
+target_test=test_batch[1]
+
+print(confusion_matrix(target_train,fit_train))
+print(confusion_matrix(target_test,pred_test))
