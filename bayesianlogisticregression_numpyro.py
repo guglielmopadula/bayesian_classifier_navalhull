@@ -18,9 +18,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from jax.lib import xla_bridge
 print(xla_bridge.get_backend().platform)
+print(jax.device_count())
+print(jax.local_device_count())
 NUM_BAYES_SAMPLES=6000
 NUM_CHAINS=4
-print(jax.device_count())
 
 def invert_permutation(p):
     p = np.asanyarray(p) # in case p is a tuple, etc.
