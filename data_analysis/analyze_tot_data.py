@@ -6,9 +6,9 @@ from tqdm import trange
 from sklearn.decomposition import PCA
 import seaborn as sns
 
-alls=np.concatenate((np.load("positive_data.npy"),np.load("negative_data.npy")))
+alls=np.concatenate((np.load("./npy_files/positive_data.npy"),np.load("./npy_files/negative_data.npy")))
 corr=np.corrcoef(alls,rowvar=False)
 plot=sns.heatmap(corr,xticklabels=False,yticklabels=False,cmap="coolwarm",vmin=-1,vmax=1,square=True)
 plot.set_aspect("equal")
 fig = plot.get_figure()
-fig.savefig("all_output.png")
+fig.savefig("data_analysis/all_output.png")
