@@ -5,6 +5,10 @@ import meshio
 from tqdm import trange
 from sklearn.decomposition import PCA
 import seaborn as sns
+import matplotlib.pyplot as plt
+plt.figure(figsize=(6, 6), 
+           dpi = 600) 
+ 
 
 alls=np.load("./npy_files/positive_data.npy")
 corr=np.corrcoef(alls,rowvar=False)
