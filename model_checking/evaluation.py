@@ -59,10 +59,26 @@ def compute_posterior_average(posterior):
     posterior={k: jnp.mean(v,axis=(0,1)).reshape(1,*jnp.mean(v,axis=(0,1)).shape) for k, v in posterior.items()}
     return posterior
 
+
+
+def compute_rse(posterior):
+    l=[]
+    for k,v in posterior.items():
+        v=v.reshape(-1,*v.shape[2:])
+        v=v.reshape(v.shape[0],-1)
+        l.append(np.max(np.std(v[:,np.mean(v,axis=0)!=0],axis=0)/np.mean(v[:,np.mean(v,axis=0)!=0],axis=0)))
+    return np.max(l)
+
+def compute_rhat(posterior):
+    l=[]
+    for k,v in posterior.items():
+        v=v.reshape(v.shape[0],v.shape[1],-1)
+        l.append(np.max(np.nan_to_num(numpyro.diagnostics.split_gelman_rubin(v))))
+    return np.max(l)
+
 def my_dic(posterior,train,target_train,likehood):
     posterior_mean=compute_posterior_average(posterior)
-    print(likehood(posterior_mean,train,target_train).shape)
-    return jnp.mean(jnp.sum(likehood(posterior_samples,train,target_train),axis=-1).reshape(-1))-jnp.sum(likehood(posterior_mean,train,target_train),axis=-1)
+    return 2*jnp.mean(jnp.sum(likehood(posterior_samples,train,target_train),axis=-1).reshape(-1))-jnp.sum(likehood(posterior_mean,train,target_train),axis=-1)
 
 models_dict={}
 models_dict["bayes_logreg_mle"]=bayes_logreg_mle
@@ -98,7 +114,7 @@ NUM_SAMPLES=600
 
 
 
-for name in ["bayes_logreg_mle","bayes_logreg_zero","bayesian_nn_mle","bayesian_nn_zero","bayes_nb_zero","bayes_nbpp_zero","bayes_nb_mle","bayes_gam_zero","bayes_gam_mle","bayes_lda_zero","bayes_qda_zero"]:
+for name in ["bayes_logreg_zero","bayesian_nn_zero","bayes_nb_zero","bayes_nbpp_zero","bayes_gam_zero","bayes_lda_zero","bayes_qda_zero"]:
     data=np.load("npy_files/data.npy",allow_pickle=True).item()
     train=data["train"]
     test=data["test"]
@@ -132,13 +148,14 @@ for name in ["bayes_logreg_mle","bayes_logreg_zero","bayesian_nn_mle","bayesian_
     print("")
     print("")
     
-    print(my_waic(posterior_samples,train,target_train,log_lik_dict[name]))
+    print("elpdWAIC is", my_waic(posterior_samples,train,target_train,log_lik_dict[name]))
+    print("elpdDIC is",my_dic(posterior_samples,train,target_train,log_lik_dict[name]))
+    print("rse is", compute_rse(posterior_samples))
+    print("rhat is", compute_rhat(posterior_samples))
 
 
     sys.stdout.close()
     sys.stdout=sys.__stdout__
-    print("elpdDIC is",my_dic(posterior_samples,train,target_train,log_lik_dict[name]))
-
 
 
     

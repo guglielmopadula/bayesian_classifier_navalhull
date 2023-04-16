@@ -22,7 +22,7 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 from jax.lib import xla_bridge
 NUM_BAYES_SAMPLES=1000
-NUM_WARMUP=6000#4000
+NUM_WARMUP=6000
 NUM_CHAINS=4
 NUM_DATA=600
 

@@ -55,7 +55,7 @@ def model(X,Y):
     D_X=X.shape[-1]
     mu=numpyro.sample("mu",dist.Normal(jnp.zeros((2,D_X)),jnp.ones((2,D_X))))
     covariance=numpyro.sample("covariance",dist.LKJCholesky(5,0.5))
-    variance=numpyro.sample("variance",dist.HalfNormal(jnp.ones(D_X)))
+    variance=numpyro.sample("variance",dist.Gamma(jnp.ones(D_X)))
     sigma=deterministic("sigma",jnp.outer(variance,variance)*covariance)
     x_hat=numpyro.sample("x_hat",dist.MultivariateNormal(mu[Y],sigma).to_event(1),obs=X) 
     return x_hat   

@@ -33,8 +33,12 @@ Pareto k diagnostic values:
 WAIC
 
 
-Computed from 4000 posterior samples and 600 observations log-likelihood matrix.
+elpdWAIC is Computed from 4000 posterior samples and 600 observations log-likelihood matrix.
 
           Estimate       SE
 elpd_waic -259958.14   368.68
 p_waic        2.75        -
+elpdDIC is [-0.046875]
+[0.41776523]
+[ 3.8913653 -4.940042  -3.4949365 -6.2542543  0.5266566]
+rse is 0.0022918193

@@ -47,7 +47,7 @@ def invert_permutation(p):
 
 def run_inference(model, rng_key, X, Y):
     start = time.time()
-    kernel = NUTS(model,step_size=0.000001) #0.0001
+    kernel = NUTS(model,step_size=0.0001) #0.0001
     mcmc = MCMC(
         kernel,
         num_warmup=NUM_WARMUP,

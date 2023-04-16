@@ -52,7 +52,7 @@ def model(X,Y):
     N=X.shape[0]
     D_X=X.shape[-1]
     mu=numpyro.sample("mu",dist.Normal(jnp.zeros((2,D_X)),jnp.ones((2,D_X))))
-    sigma=numpyro.sample("sigma",dist.HalfNormal(jnp.ones((2,D_X))))
+    sigma=numpyro.sample("sigma",dist.Gamma(jnp.ones((2,D_X))))
     x_hat=numpyro.sample("x_hat",dist.Normal(mu[Y],sigma[Y]).to_event(1),obs=X) 
     return x_hat   
 

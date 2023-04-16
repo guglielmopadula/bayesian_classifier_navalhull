@@ -50,7 +50,7 @@ matrix2[2,1]      0.05      1.34      0.12     -2.06      2.10    297.28      1.
 
 Mean pvalue is 0.51225
 number of divergences is 0
-[[274  26]
+	[[274  26]
  [  0 300]]
 [[276  24]
  [  0 300]]
@@ -74,8 +74,11 @@ Pareto k diagnostic values:
 WAIC
 
 
-Computed from 4000 posterior samples and 600 observations log-likelihood matrix.
+elpdWAIC is Computed from 4000 posterior samples and 600 observations log-likelihood matrix.
 
           Estimate       SE
 elpd_waic  -130.33     5.89
 p_waic        0.91        -
+elpdDIC is 156.13126
+rse is 796.4774
+rhat is 1.0270151

@@ -54,10 +54,10 @@ def model(X,Y):
     D_X=X.shape[-1]
     mu=numpyro.sample("mu",dist.Normal(jnp.zeros((2,D_X)),jnp.ones((2,D_X))))
     covariance_1=numpyro.sample("covariance_1",dist.LKJCholesky(5,0.5))
-    variance_1=numpyro.sample("variance_1",dist.HalfNormal(jnp.ones(D_X)))
+    variance_1=numpyro.sample("variance_1",dist.Gamma(jnp.ones(D_X)))
     sigma_1=deterministic("sigma_1",jnp.outer(variance_1,variance_1)*covariance_1)
     covariance_2=numpyro.sample("covariance_2",dist.LKJCholesky(5,0.5))
-    variance_2=numpyro.sample("variance_2",dist.HalfNormal(jnp.ones(D_X)))
+    variance_2=numpyro.sample("variance_2",dist.Gamma(jnp.ones(D_X)))
     sigma_2=deterministic("sigma_2",jnp.outer(variance_2,variance_2)*covariance_2)
     sigma=deterministic("sigma",jnp.concatenate((sigma_1.reshape(1,D_X,D_X),sigma_2.reshape(1,D_X,D_X))))
     x_hat=numpyro.sample("x_hat",dist.MultivariateNormal(mu[Y],sigma[Y]).to_event(1),obs=X) 
