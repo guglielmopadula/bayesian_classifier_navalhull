@@ -1,65 +1,17 @@
 import os
 import multiprocessing
 
-from jax import vmap
-import jax.numpy as jnp
-import jax.random as random
 import numpy as np
-import numpyro
-from numpyro.infer import Predictive, SVI, Trace_ELBO
-from numpyro import handlers
-import numpyro.distributions as dist
-from numpyro.infer import MCMC, NUTS, SA
-import dill
-import jax
 import itertools
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import pairwise_distances
 import scipy
-import argparse
-import time
-
-import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 import numpy as np
-from jax.lib import xla_bridge
 import os
 import multiprocessing
-from numpyro.infer import log_likelihood
-
-
-NUM_BAYES_SAMPLES=3000
-NUM_WARMUP=1000#27000
-NUM_CHAINS=4
-
-classic_coeffs=np.load("npy_files/gam_coef.npy")
-alpha_mean=classic_coeffs[-1]
-beta_mean=classic_coeffs[:-1]
-alpha_mean=jnp.array(alpha_mean.reshape(1,1))
-beta_mean=jnp.array(beta_mean.reshape(-1,1))
-
-def invert_permutation(p):
-    p = np.asanyarray(p) # in case p is a tuple, etc.
-    s = np.empty_like(p)
-    s[p] = np.arange(p.size)
-    return s
-
-def run_inference(model, rng_key, X, Y):
-    start = time.time()
-    kernel = NUTS(model,step_size=0.0001)
-    mcmc = MCMC(
-        kernel,
-        num_warmup=NUM_WARMUP,
-        num_samples=NUM_BAYES_SAMPLES,
-        num_chains=NUM_CHAINS,
-        progress_bar=True,
-    )
-    mcmc.run(rng_key, X, Y)
-    divergences=jnp.sum(mcmc.get_extra_fields()["diverging"])
-    mcmc.print_summary()
-    print("\nMCMC elapsed time:", time.time() - start)
-    return mcmc.get_samples(group_by_chain=True),divergences
+import stan
 '''
 # helper function for prediction
 def predict(model, rng_key, samples, X):
@@ -85,13 +37,7 @@ def eta_constructor(m,d):
     return simple_eta   
 
 
-def model(X,Y):
-    N,D_X=X.shape
-    alpha = numpyro.sample("alpha", dist.Normal(0, 0.1*np.ones((1, 1))))
-    beta = numpyro.sample("beta", dist.Normal(0,0.1*jnp.ones((D_X, 1))))
-    logit=jnp.matmul(X,beta)+alpha
-    y=numpyro.sample("Y",dist.BernoulliLogits(logit).to_event(1),obs=Y)
-    return y
+
 
 def compute_features(train):
     NUM_DATA=train.shape[0]
@@ -120,9 +66,6 @@ def compute_features(train):
     return X_train
 
 
-def my_log_likehood(posterior_samples,train,target_train):
-    train_features=compute_features(train)
-    return log_likelihood(model,posterior_samples,train_features,target_train)["Y"]
 
 
 def partition0(max_range, S):
@@ -130,10 +73,6 @@ def partition0(max_range, S):
     return np.array([i for i in itertools.product(*(range(i+1) for i in max_range)) if sum(i)<=S])            
 if __name__ == "__main__":
 
-    print(xla_bridge.get_backend().platform)
-    print(jax.device_count())
-    print(jax.local_device_count())
-    numpyro.set_host_device_count(4)
 
     m=4 #must be 2*m>d+1
     data=np.load("npy_files/data.npy",allow_pickle=True).item()
@@ -146,30 +85,45 @@ if __name__ == "__main__":
     X_train=compute_features(train)
     X_test=compute_features(test)
 
-    classic_coeffs=np.load("npy_files/gam_coef.npy")
-    alpha_mean=classic_coeffs[-1]
-    beta_mean=classic_coeffs[:-1]
-    alpha_mean=jnp.array(alpha_mean.reshape(1,1))
-    beta_mean=jnp.array(beta_mean.reshape(-1,1))
 
 
-    rng_key, rng_key_predict = random.split(random.PRNGKey(0))
+    model = """
+data {
+    int<lower=0> N;
+    int<lower=1> K;  
+    array[N] int y;           // estimated treatment effects
+    matrix[N,K] x; // standard error of effect estimates
+    matrix[N,K] x_new; // standard error of effect estimates
 
-    shape=X_train[0].shape[0]
-    posterior_samples,divergences=run_inference(model,rng_key,X_train,target_train)
-    alpha=posterior_samples["alpha"].reshape(NUM_CHAINS,NUM_BAYES_SAMPLES,-1)
-    beta=posterior_samples["beta"].reshape(NUM_CHAINS,NUM_BAYES_SAMPLES,-1)
+}
+parameters {
+  real beta;                // population treatment effect
+  vector[K] alpha;          // unscaled deviation from mu by school
+}
+model {
+    alpha ~ normal(0, 5);
+    beta ~ normal(0, 5);
+    y ~ bernoulli_logit(x*alpha+beta);
+}
+generated quantities {
+  array[N] int y_new;
+  for (n in 1:N)
+    y_new[n] = bernoulli_logit_rng(x_new[n] * alpha+beta);
+  array[N] int y_pred;
+  for (n in 1:N)
+    y_pred[n] = bernoulli_logit_rng(x[n] * alpha+beta);
+}
+"""
 
-
-    predictive = Predictive(model, posterior_samples, return_sites=["Y"])
-    y_fitted_dist=predictive(random.PRNGKey(0), X_train,None)["Y"]
-    y_fitted_dist=y_fitted_dist.reshape(NUM_CHAINS*NUM_BAYES_SAMPLES,-1)
-    y_fitted_prob=np.mean(y_fitted_dist,axis=0)
-    y_fitted=np.round(y_fitted_prob)
-    y_predictive_dist=predictive(random.PRNGKey(0), X_test,None)["Y"]
-    y_predictive_dist=y_predictive_dist.reshape(NUM_CHAINS*NUM_BAYES_SAMPLES,-1)
-    y_predictive_prob=np.mean(y_predictive_dist,axis=0)
-    y_predictive=np.round(y_predictive_prob)
+    data={"N":600,"K":X_train.shape[1],"y":target_train,"x":X_train,"x_new":X_test}
+    posterior = stan.build(model, data=data)
+    fit = posterior.sample(num_chains=4, num_samples=1000)
+    y_fitted_dist=fit["y_pred"]
+    y_predictive_dist=fit["y_new"]
+    y_fitted_prob=np.mean(y_fitted_dist,axis=1).reshape(-1)
+    y_fitted=np.zeros_like(y_fitted_prob)*(y_fitted_prob<0.5)+np.ones_like(y_fitted_prob)*(y_fitted_prob>=0.5)
+    y_predictive_prob=np.mean(y_predictive_dist,axis=1)
+    y_predictive=np.zeros_like(y_predictive_prob)*(y_predictive_prob<0.5)+np.ones_like(y_predictive_prob)*(y_predictive_prob>=0.5)
     print(confusion_matrix(target_train,y_fitted))
     print(confusion_matrix(target_test,y_predictive))
-    np.save("./npy_files/bayes_gam_zero.npy",{"posterior_samples":posterior_samples,"y_fitted_dist":y_fitted_dist,"y_predictive_dist":y_predictive_dist,"target_train":target_train,"target_test":target_test,"num_chains":NUM_CHAINS,"num_bayes_samples":NUM_BAYES_SAMPLES,"divergences":divergences})
+    #np.save("./npy_files/bayes_gam_zero.npy",{"posterior_samples":posterior_samples,"y_fitted_dist":y_fitted_dist,"y_predictive_dist":y_predictive_dist,"target_train":target_train,"target_test":target_test,"num_chains":NUM_CHAINS,"num_bayes_samples":NUM_BAYES_SAMPLES,"divergences":divergences})
