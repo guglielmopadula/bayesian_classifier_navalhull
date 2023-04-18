@@ -46,27 +46,17 @@ data {
 
 }
 parameters {
-  matrix[K,4] alpha;
-  row_vector[4] beta;
-  matrix[4,3] gamma;
-  row_vector[3] delta;
-  matrix[3,2] epsilon;
-  row_vector[2] zeta;
-  matrix[2,1] eta;
-  row_vector[1] theta;
+  matrix[K,3] alpha;
+  matrix[3,1] gamma;
+  row_vector[1] delta;
 }
 
 model {
-    to_vector(alpha) ~ normal(0, 0.08);
-    to_vector(beta) ~ normal(0, 0.1);
-    to_vector(gamma) ~ normal(0, 0.1);
-    to_vector(delta) ~ normal(0, 0.1);
-    to_vector(epsilon) ~ normal(0, 0.08);
-    to_vector(zeta) ~ normal(0, 0.1);
-    to_vector(eta) ~ normal(0, 0.08);
-    to_vector(theta) ~normal(0, 0.1);
+    to_vector(alpha) ~ normal(0, 0.05);
+    to_vector(gamma) ~ normal(0, 0.05);
+    to_vector(delta) ~ normal(0, 0.05);
     for (n in 1:N)
-    y[n] ~ bernoulli_logit(to_vector(tanh(tanh(tanh(x[n]*alpha+beta)*gamma+delta)*epsilon+zeta)*eta+theta));
+    y[n] ~ bernoulli_logit(to_vector(tanh(x[n]*alpha)*gamma+delta));
 }
 generated quantities {
   array[N] int y_new;
@@ -75,12 +65,12 @@ generated quantities {
 
 
   for (n in 1:N){
-    y_new[n] = bernoulli_logit_rng(to_vector(tanh(tanh(tanh(x_new[n]*alpha+beta)*gamma+delta)*epsilon+zeta)*eta+theta))[1];
+    y_new[n] = bernoulli_logit_rng(to_vector(tanh(x_new[n]*alpha)*gamma+delta))[1];
     }
   for (n in 1:N){
-    y_pred[n] = bernoulli_logit_rng(to_vector(tanh(tanh(tanh(x[n]*alpha+beta)*gamma+delta)*epsilon+zeta)*eta+theta))[1];
+    y_pred[n] = bernoulli_logit_rng(to_vector(tanh(x[n]*alpha)*gamma+delta))[1];
     }
-
+    
     }
 """
 
