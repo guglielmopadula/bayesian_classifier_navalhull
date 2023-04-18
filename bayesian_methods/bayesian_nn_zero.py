@@ -46,17 +46,27 @@ if __name__ == "__main__":
 
   }
   parameters {
-  matrix[K,3] alpha;
-  matrix[3,1] gamma;
-  row_vector[1] delta;
+  matrix[K,4] alpha;
+  row_vector[4] beta;
+  matrix[4,3] gamma;
+  row_vector[3] delta;
+  matrix[3,2] epsilon;
+  row_vector[2] zeta;
+  matrix[2,1] eta;
+  row_vector[1] theta;
   }
 
   model {
-  to_vector(alpha) ~ normal(0, 0.05);
-  to_vector(gamma) ~ normal(0, 0.05);
-  to_vector(delta) ~ normal(0, 0.05);
+  to_vector(alpha) ~ std_normal();
+  to_vector(beta) ~ std_normal();
+  to_vector(gamma) ~ std_normal();
+  to_vector(delta) ~ std_normal();
+  to_vector(epsilon) ~ std_normal();
+  to_vector(zeta) ~ std_normal();
+  to_vector(eta) ~ std_normal();
+  to_vector(theta) ~ std_normal();
   for (n in 1:N)
-  y[n] ~ bernoulli_logit(to_vector(tanh(x[n]*alpha)*gamma+delta));
+  y[n] ~ bernoulli_logit(to_vector(tanh(tanh(tanh(x[n]*alpha+beta)*gamma+delta)*epsilon+zeta)*eta+theta));
   }
   generated quantities {
   array[N] int y_new;
@@ -69,11 +79,11 @@ if __name__ == "__main__":
 
 
   for (n in 1:N){
-  logit_new[n]=(tanh(x_new[n]*alpha)*gamma+delta)[1];
+  logit_new[n]=(tanh(tanh(tanh(x_new[n]*alpha+beta)*gamma+delta)*epsilon+zeta)*eta+theta)[1];
   y_new[n] = bernoulli_logit_rng(logit_new[n]);
   }
   for (n in 1:N){
-  logit_pred[n]=(tanh(x[n]*alpha)*gamma+delta)[1];
+  logit_pred[n]=(tanh(tanh(tanh(x[n]*alpha+beta)*gamma+delta)*epsilon+zeta)*eta+theta)[1];
   y_pred[n] = bernoulli_logit_rng(logit_pred[n]);
   like_pred[n]=bernoulli_logit_lpmf(y_pred[n]|logit_pred[n]);
   }
@@ -83,7 +93,7 @@ if __name__ == "__main__":
 
   data={"N":600,"K":5,"y":target_train,"x":train,"x_new":test}
   posterior = stan.build(model, data=data)
-  fit = posterior.sample(num_chains=4, num_samples=1000)
+  fit = posterior.sample(num_chains=4, num_samples=1000,num_warmup=2000)
   y_fitted_dist=fit["y_pred"]
   y_predictive_dist=fit["y_new"]
   y_fitted_prob=np.mean(y_fitted_dist,axis=1).reshape(-1)

@@ -1,7 +1,7 @@
 number of divergences is 0
-train accuracy score is 0.9433333333333334
-test accuracy score is 0.9466666666666667
-Mean pvalue is 0.527
-rse is 613.2939726977228
-waic is -415.89945183672245
-rhat is 1.0112086296920746
+train accuracy score is 0.99
+test accuracy score is 0.9833333333333333
+Mean pvalue is 0.61825
+rse is 18547.27537074203
+waic is -147.42740944828842
+rhat is 1.058135265079498
