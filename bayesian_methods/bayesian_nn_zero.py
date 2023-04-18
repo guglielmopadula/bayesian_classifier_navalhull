@@ -57,14 +57,14 @@ if __name__ == "__main__":
   }
 
   model {
-  to_vector(alpha) ~ std_normal();
-  to_vector(beta) ~ std_normal();
-  to_vector(gamma) ~ std_normal();
-  to_vector(delta) ~ std_normal();
-  to_vector(epsilon) ~ std_normal();
-  to_vector(zeta) ~ std_normal();
-  to_vector(eta) ~ std_normal();
-  to_vector(theta) ~ std_normal();
+  to_vector(alpha) ~ normal(0,2);
+  to_vector(beta) ~ normal(0,2);
+  to_vector(gamma) ~ normal(0,2);
+  to_vector(delta) ~ normal(0,2);
+  to_vector(epsilon) ~ normal(0,2);
+  to_vector(zeta) ~ normal(0,2);
+  to_vector(eta) ~ normal(0,2);
+  to_vector(theta) ~ normal(0,2);
   for (n in 1:N)
   y[n] ~ bernoulli_logit(to_vector(tanh(tanh(tanh(x[n]*alpha+beta)*gamma+delta)*epsilon+zeta)*eta+theta));
   }
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
   data={"N":600,"K":5,"y":target_train,"x":train,"x_new":test}
   posterior = stan.build(model, data=data)
-  fit = posterior.sample(num_chains=4, num_samples=1000,num_warmup=2000)
+  fit = posterior.sample(num_chains=4, num_samples=1000,num_warmup=4000)
   y_fitted_dist=fit["y_pred"]
   y_predictive_dist=fit["y_new"]
   y_fitted_prob=np.mean(y_fitted_dist,axis=1).reshape(-1)
